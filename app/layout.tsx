@@ -1,15 +1,15 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { Sidebar } from "@/components/sidebar"
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import { ClerkProvider } from '@clerk/nextjs'
+import { ClinicGuard } from '@/components/clinic-guard'
+import { ThemeProvider } from '@/components/theme-provider'
+import './globals.css'
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: "MedX Clinic - Sistema de Agendamento",
-  description: "Sistema moderno de agendamento para clínicas médicas",
-    generator: 'v0.dev'
+  title: 'MedX - Sistema de Gestão Médica',
+  description: 'Sistema completo para gestão de clínicas médicas',
 }
 
 export default function RootLayout({
@@ -18,17 +18,19 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
-      <body className={inter.className}>
-        <div className="flex h-screen bg-background">
-          <div className="hidden w-64 border-r lg:block">
-            <Sidebar />
-          </div>
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <main className="flex-1 overflow-auto">{children}</main>
-          </div>
-        </div>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="pt-BR">
+        <body className={inter.className}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <ClinicGuard>{children}</ClinicGuard>
+          </ThemeProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }

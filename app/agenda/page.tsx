@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar } from "@/components/ui/calendar"
@@ -49,7 +48,7 @@ export default function AgendaPage() {
 
   return (
     <div className="flex flex-col">
-      <Header title="Agenda" />
+      
 
       <div className="flex-1 p-6">
         <div className="grid gap-6 lg:grid-cols-3">

@@ -5,7 +5,9 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Separator } from "@/components/ui/separator"
 import { LayoutDashboard, Calendar, Users, UserCheck, Settings, Stethoscope } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 const navigation = [
   {
@@ -43,31 +45,42 @@ export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname()
 
   return (
-    <div className={cn("flex h-full flex-col bg-card", className)}>
+    <div className={cn("flex h-full w-full flex-col border-r bg-card", className)}>
+      {/* Header da Sidebar */}
       <div className="flex h-16 items-center border-b px-6">
         <div className="flex items-center gap-2">
           <Stethoscope className="h-6 w-6 text-primary" />
-          <span className="text-lg font-semibold">MedX Clinic</span>
+          <span className="text-lg font-semibold">MedX</span>
         </div>
       </div>
-      <ScrollArea className="flex-1 px-4 py-6">
-        <nav className="space-y-2">
+      
+      {/* Navegação */}
+      <ScrollArea className="flex-1">
+        <nav className="flex flex-col gap-2 p-4">
           {navigation.map((item) => {
             const isActive = pathname === item.href
             return (
               <Link key={item.name} href={item.href}>
                 <Button
                   variant={isActive ? "secondary" : "ghost"}
-                  className={cn("w-full justify-start gap-3", isActive && "bg-accent text-accent-foreground")}
+                  className={cn(
+                    "w-full justify-start gap-3 h-10",
+                    isActive && "bg-accent text-accent-foreground"
+                  )}
                 >
                   <item.icon className="h-4 w-4" />
-                  {item.name}
+                  <span className="truncate">{item.name}</span>
                 </Button>
               </Link>
             )
           })}
         </nav>
       </ScrollArea>
+
+      {/* Footer com Toggle de Tema */}
+      <div className="border-t p-4">
+        <ThemeToggle />
+      </div>
     </div>
   )
 }
