@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
 import { ClinicGuard } from '@/components/clinic-guard'
 import { ThemeProvider } from '@/components/theme-provider'
+import { Toaster } from '@/components/ui/toaster'
+import { ptBR } from '@clerk/localizations'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -18,8 +20,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <ClerkProvider>
-      <html lang="pt-BR">
+    <ClerkProvider localization={ptBR}>
+      <html lang="pt-BR" suppressHydrationWarning>
         <body className={inter.className}>
           <ThemeProvider
             attribute="class"
@@ -28,6 +30,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <ClinicGuard>{children}</ClinicGuard>
+            <Toaster />
           </ThemeProvider>
         </body>
       </html>

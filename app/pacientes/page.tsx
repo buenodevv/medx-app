@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,49 +11,202 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast"
 
-// Dados mock dos pacientes
-const mockPatients = [
-  {
-    id: 1,
-    name: "Maria Silva",
-    cpf: "123.456.789-00",
-    phone: "(11) 99999-9999",
-    email: "maria@email.com",
-    lastVisit: "2024-01-15",
-    nextAppointment: "2024-01-25",
-    status: "ativo",
-  },
-  {
-    id: 2,
-    name: "João Santos",
-    cpf: "987.654.321-00",
-    phone: "(11) 88888-8888",
-    email: "joao@email.com",
-    lastVisit: "2024-01-10",
-    nextAppointment: null,
-    status: "ativo",
-  },
-  {
-    id: 3,
-    name: "Ana Costa",
-    cpf: "456.789.123-00",
-    phone: "(11) 77777-7777",
-    email: "ana@email.com",
-    lastVisit: "2023-12-20",
-    nextAppointment: "2024-01-30",
-    status: "inativo",
-  },
-]
+type Patient = {
+  id: string
+  name: string
+  cpf: string
+  phone?: string
+  email?: string
+  address?: string
+  status: 'AGENDADO' | 'CONFIRMADO' | 'CANCELADO' | 'FINALIZADO'
+  lastConsult?: string
+  createdAt: string
+  updatedAt: string
+}
+
+type PatientFormData = {
+  name: string
+  cpf: string
+  phone: string
+  email: string
+  address: string
+  status: 'AGENDADO' | 'CONFIRMADO' | 'CANCELADO' | 'FINALIZADO'
+  lastConsult: string
+}
 
 export default function PacientesPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [patients, setPatients] = useState(mockPatients)
+  const [patients, setPatients] = useState<Patient[]>([])
+  const [loading, setLoading] = useState(false)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingPatient, setEditingPatient] = useState<Patient | null>(null)
+  const [formData, setFormData] = useState<PatientFormData>({
+    name: '',
+    cpf: '',
+    phone: '',
+    email: '',
+    address: '',
+    status: 'AGENDADO',
+    lastConsult: ''
+  })
+  const { toast } = useToast()
+
+  // Carregar pacientes ao montar o componente
+  useEffect(() => {
+    fetchPatients()
+  }, [])
+
+  // Função para obter as informações do badge de status
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'AGENDADO':
+        return { label: 'Agendado', variant: 'default' as const }
+      case 'CONFIRMADO':
+        return { label: 'Confirmado', variant: 'ready' as const }
+      case 'CANCELADO':
+        return { label: 'Cancelado', variant: 'destructive' as const }
+      case 'FINALIZADO':
+        return { label: 'Finalizado', variant: 'secondary' as const }
+      default:
+        return { label: status, variant: 'outline' as const }
+    }
+  }
+
+  // Buscar pacientes
+  const fetchPatients = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/patients?search=${encodeURIComponent(searchTerm)}`)
+      if (response.ok) {
+        const data = await response.json()
+        setPatients(data)
+      } else {
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar pacientes",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar pacientes",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Criar ou atualizar paciente
+  const handleSubmit = async () => {
+    try {
+      const url = editingPatient ? `/api/patients/${editingPatient.id}` : '/api/patients'
+      const method = editingPatient ? 'PUT' : 'POST'
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...formData,
+          lastConsult: formData.lastConsult || null
+        })
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Sucesso",
+          description: editingPatient ? "Paciente atualizado com sucesso" : "Paciente criado com sucesso"
+        })
+        setIsDialogOpen(false)
+        setEditingPatient(null)
+        setFormData({
+          name: '',
+          cpf: '',
+          phone: '',
+          email: '',
+          address: '',
+          status: 'AGENDADO',
+          lastConsult: ''
+        })
+        fetchPatients()
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Erro",
+          description: error.error || "Erro ao salvar paciente",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar paciente",
+        variant: "destructive"
+      })
+    }
+  }
+
+  // Deletar paciente
+  const handleDelete = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este paciente?')) return
+    
+    try {
+      const response = await fetch(`/api/patients/${id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Sucesso",
+          description: "Paciente excluído com sucesso"
+        })
+        fetchPatients()
+      } else {
+        toast({
+          title: "Erro",
+          description: "Erro ao excluir paciente",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir paciente",
+        variant: "destructive"
+      })
+    }
+  }
+
+  // Abrir dialog para edição
+  const handleEdit = (patient: Patient) => {
+    setEditingPatient(patient)
+    setFormData({
+      name: patient.name,
+      cpf: patient.cpf,
+      phone: patient.phone || '',
+      email: patient.email || '',
+      address: patient.address || '',
+      status: patient.status,
+      lastConsult: patient.lastConsult ? patient.lastConsult.split('T')[0] : ''
+    })
+    setIsDialogOpen(true)
+  }
+
+  // Carregar pacientes na inicialização e quando searchTerm mudar
+  useEffect(() => {
+    fetchPatients()
+  }, [searchTerm])
 
   const filteredPatients = patients.filter(patient =>
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.phone.includes(searchTerm)
+    (patient.email && patient.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (patient.phone && patient.phone.includes(searchTerm)) ||
+    patient.cpf.includes(searchTerm)
   )
 
   return (
@@ -74,118 +227,196 @@ export default function PacientesPage() {
               />
             </div>
             
-            <Dialog>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
+                <Button 
+                  className="flex items-center gap-2"
+                  onClick={() => {
+                    setEditingPatient(null)
+                    setFormData({
+                      name: '',
+                      cpf: '',
+                      phone: '',
+                      email: '',
+                      address: '',
+                      status: 'AGENDADO',
+                      lastConsult: ''
+                    })
+                  }}
+                >
                   <Plus className="h-4 w-4" />
                   Novo Paciente
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>Cadastrar Novo Paciente</DialogTitle>
+                  <DialogTitle>
+                    {editingPatient ? 'Editar Paciente' : 'Cadastrar Novo Paciente'}
+                  </DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="name">Nome Completo</Label>
-                      <Input id="name" placeholder="Nome do paciente" />
+                      <Label htmlFor="name">Nome Completo *</Label>
+                      <Input 
+                        id="name" 
+                        placeholder="Nome do paciente"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="cpf">CPF</Label>
-                      <Input id="cpf" placeholder="000.000.000-00" />
+                      <Label htmlFor="cpf">CPF *</Label>
+                      <Input 
+                        id="cpf" 
+                        placeholder="000.000.000-00"
+                        value={formData.cpf}
+                        onChange={(e) => setFormData({...formData, cpf: e.target.value})}
+                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="phone">Telefone</Label>
-                      <Input id="phone" placeholder="(11) 99999-9999" />
+                      <Input 
+                        id="phone" 
+                        placeholder="(11) 99999-9999"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      />
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" placeholder="email@exemplo.com" />
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        placeholder="email@exemplo.com"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      />
                     </div>
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="address">Endereço</Label>
-                    <Textarea id="address" placeholder="Endereço completo" />
+                    <Textarea 
+                      id="address" 
+                      placeholder="Endereço completo"
+                      value={formData.address}
+                      onChange={(e) => setFormData({...formData, address: e.target.value})}
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="birthdate">Data de Nascimento</Label>
-                      <Input id="birthdate" type="date" />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="gender">Sexo</Label>
-                      <Select>
+                      <Label htmlFor="status">Status</Label>
+                      <Select 
+                        value={formData.status} 
+                        onValueChange={(value) => setFormData({...formData, status: value as any})}
+                      >
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
+                          <SelectValue placeholder="Selecione o status" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="masculino">Masculino</SelectItem>
-                          <SelectItem value="feminino">Feminino</SelectItem>
-                          <SelectItem value="outro">Outro</SelectItem>
+                          <SelectItem value="AGENDADO">Agendado</SelectItem>
+                          <SelectItem value="CONFIRMADO">Confirmado</SelectItem>
+                          <SelectItem value="CANCELADO">Cancelado</SelectItem>
+                          <SelectItem value="FINALIZADO">Finalizado</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="lastConsult">Última Consulta</Label>
+                      <Input 
+                        id="lastConsult" 
+                        type="date"
+                        value={formData.lastConsult}
+                        onChange={(e) => setFormData({...formData, lastConsult: e.target.value})}
+                      />
+                    </div>
                   </div>
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline">Cancelar</Button>
-                    <Button>Salvar Paciente</Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setIsDialogOpen(false)
+                        setEditingPatient(null)
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleSubmit}>
+                      {editingPatient ? 'Atualizar' : 'Salvar'} Paciente
+                    </Button>
                   </div>
                 </div>
               </DialogContent>
             </Dialog>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>CPF</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Última Consulta</TableHead>
-                <TableHead>Próximo Agendamento</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredPatients.map((patient) => (
-                <TableRow key={patient.id}>
-                  <TableCell className="font-medium">{patient.name}</TableCell>
-                  <TableCell>{patient.cpf}</TableCell>
-                  <TableCell>{patient.phone}</TableCell>
-                  <TableCell>{patient.email}</TableCell>
-                  <TableCell>
-                    {new Date(patient.lastVisit).toLocaleDateString('pt-BR')}
-                  </TableCell>
-                  <TableCell>
-                    {patient.nextAppointment 
-                      ? new Date(patient.nextAppointment).toLocaleDateString('pt-BR')
-                      : 'Não agendado'
-                    }
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={patient.status === 'ativo' ? 'default' : 'secondary'}>
-                      {patient.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {loading ? (
+            <div className="text-center py-8">
+              Carregando pacientes...
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>CPF</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead>Endereço</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Última Consulta</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredPatients.map((patient) => {
+                  const statusInfo = getStatusBadge(patient.status)
+                  return (
+                    <TableRow key={patient.id}>
+                      <TableCell className="font-medium">{patient.name}</TableCell>
+                      <TableCell>{patient.cpf}</TableCell>
+                      <TableCell>{patient.email || '-'}</TableCell>
+                      <TableCell>{patient.phone || '-'}</TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {patient.address || '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusInfo.variant}>
+                          {statusInfo.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {patient.lastConsult 
+                          ? new Date(patient.lastConsult).toLocaleDateString('pt-BR')
+                          : '-'
+                        }
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleEdit(patient)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleDelete(patient.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          )}
 
           {filteredPatients.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">

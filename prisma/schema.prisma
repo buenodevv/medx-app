@@ -24,8 +24,9 @@ model Clinic {
   updatedAt   DateTime @updatedAt
   
   // Relacionamento com usuários
-  users       User[]
-  patients    Patient[]
+  users         User[]
+  patients      Patient[]
+  profissionals Profissional[]
   
   @@map("clinics")
 }
@@ -45,15 +46,18 @@ model User {
 }
 
 model Patient {
-  id          String   @id @default(cuid())
-  name        String
-  cpf         String   @unique
-  phone       String?
-  email       String?
-  clinicId    String
-  clinic      Clinic   @relation(fields: [clinicId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String        @id @default(cuid())
+  name          String
+  cpf           String        @unique
+  phone         String?
+  email         String?
+  address       String?
+  status        PatientStatus @default(AGENDADO)
+  lastConsult   DateTime?
+  clinicId      String
+  clinic        Clinic        @relation(fields: [clinicId], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   
   @@map("patients")
 }
@@ -64,4 +68,39 @@ enum UserRole {
   NURSE
   RECEPTIONIST
   USER
+}
+
+model Profissional {
+  id              String              @id @default(cuid())
+  name            String
+  phone           String?
+  email           String              @unique
+  crm             String              @unique
+  image           String?
+  specialty       String?
+  workingDays     ProfissionalDay[]
+  clinicId        String
+  clinic          Clinic              @relation(fields: [clinicId], references: [id])
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  
+  @@map("profissionals")
+}
+
+model ProfissionalDay {
+  id             String       @id @default(cuid())
+  dayOfWeek      Int          // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
+  startTime      String       // Formato HH:mm
+  endTime        String       // Formato HH:mm
+  profissionalId String
+  profissional   Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
+  
+  @@map("profissional_days")
+}
+
+enum PatientStatus {
+  AGENDADO
+  CONFIRMADO
+  CANCELADO
+  FINALIZADO
 }
