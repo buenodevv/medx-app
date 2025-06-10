@@ -26,7 +26,7 @@ export async function PUT(
 
     const { id } = params
     const body = await request.json()
-    const { name, phone, email, crm, image, specialty, workingDays } = body
+    const { name, phone, email, crm, image, specialty, consultationPrice, workingDays } = body
 
     // Verificar se o profissional existe e pertence à clínica do usuário
     const existingProfissional = await prisma.profissional.findFirst({
@@ -89,6 +89,7 @@ export async function PUT(
         crm,
         image,
         specialty,
+        consultationPrice: consultationPrice ? parseFloat(consultationPrice) : null,
         workingDays: {
           deleteMany: {}, // Remove todos os dias existentes
           create: workingDays?.map((day: any) => ({

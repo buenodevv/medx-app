@@ -27,6 +27,7 @@ model Clinic {
   users         User[]
   patients      Patient[]
   profissionals Profissional[]
+  appointments  Appointment[]
   
   @@map("clinics")
 }
@@ -54,6 +55,7 @@ model Patient {
   address       String?
   status        PatientStatus @default(AGENDADO)
   lastConsult   DateTime?
+  appointments  Appointment[]
   clinicId      String
   clinic        Clinic        @relation(fields: [clinicId], references: [id])
   createdAt     DateTime      @default(now())
@@ -71,18 +73,20 @@ enum UserRole {
 }
 
 model Profissional {
-  id              String              @id @default(cuid())
-  name            String
-  phone           String?
-  email           String              @unique
-  crm             String              @unique
-  image           String?
-  specialty       String?
-  workingDays     ProfissionalDay[]
-  clinicId        String
-  clinic          Clinic              @relation(fields: [clinicId], references: [id])
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  id                String              @id @default(cuid())
+  name              String
+  phone             String?
+  email             String              @unique
+  crm               String              @unique
+  image             String?
+  specialty         String?
+  consultationPrice Float?
+  workingDays       ProfissionalDay[]
+  appointments      Appointment[]
+  clinicId          String
+  clinic            Clinic              @relation(fields: [clinicId], references: [id])
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
   
   @@map("profissionals")
 }
@@ -98,9 +102,36 @@ model ProfissionalDay {
   @@map("profissional_days")
 }
 
+model Appointment {
+  id             String            @id @default(cuid())
+  date           DateTime          // Data do agendamento
+  time           String            // Horário no formato HH:mm
+  duration       Int               @default(30) // Duração em minutos
+  status         AppointmentStatus @default(AGENDADO)
+  notes          String?           // Observações
+  patientId      String
+  patient        Patient           @relation(fields: [patientId], references: [id])
+  profissionalId String
+  profissional   Profissional      @relation(fields: [profissionalId], references: [id])
+  clinicId       String
+  clinic         Clinic            @relation(fields: [clinicId], references: [id])
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  
+  @@map("appointments")
+}
+
 enum PatientStatus {
   AGENDADO
   CONFIRMADO
   CANCELADO
   FINALIZADO
+}
+
+enum AppointmentStatus {
+  AGENDADO
+  CONFIRMADO
+  EM_ANDAMENTO
+  FINALIZADO
+  CANCELADO
 }

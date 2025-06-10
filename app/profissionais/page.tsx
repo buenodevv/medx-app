@@ -6,13 +6,12 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Search, Plus, Edit, Trash2, Mail, Phone, Calendar, Clock } from "lucide-react"
+import { Search, Plus, Edit, Mail, Phone, Calendar, Clock } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { Trash2 } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { Checkbox } from "@/components/ui/checkbox"
 
 type WorkingDay = {
   dayOfWeek: number
@@ -28,6 +27,7 @@ type Profissional = {
   crm: string
   image?: string
   specialty?: string
+  consultationPrice?: number
   workingDays: WorkingDay[]
   createdAt: string
   updatedAt: string
@@ -40,6 +40,7 @@ type ProfissionalFormData = {
   crm: string
   image: string
   specialty: string
+  consultationPrice: string
   workingDays: WorkingDay[]
 }
 
@@ -66,6 +67,7 @@ export default function ProfissionaisPage() {
     crm: '',
     image: '',
     specialty: '',
+    consultationPrice: '',
     workingDays: []
   })
   const { toast } = useToast()
@@ -189,6 +191,7 @@ export default function ProfissionaisPage() {
       crm: profissional.crm,
       image: profissional.image || '',
       specialty: profissional.specialty || '',
+      consultationPrice: profissional.consultationPrice?.toString() || '',
       workingDays: profissional.workingDays
     })
     setIsDialogOpen(true)
@@ -202,6 +205,7 @@ export default function ProfissionaisPage() {
       crm: '',
       image: '',
       specialty: '',
+      consultationPrice: '',
       workingDays: []
     })
     setEditingProfissional(null)
@@ -212,27 +216,41 @@ export default function ProfissionaisPage() {
     fetchProfissionals(searchTerm)
   }
 
-  const addWorkingDay = () => {
-    setFormData(prev => ({
-      ...prev,
-      workingDays: [...prev.workingDays, { dayOfWeek: 1, startTime: '08:00', endTime: '17:00' }]
-    }))
+  const toggleWorkingDay = (dayOfWeek: number) => {
+    setFormData(prev => {
+      const existingDayIndex = prev.workingDays.findIndex(day => day.dayOfWeek === dayOfWeek)
+      
+      if (existingDayIndex >= 0) {
+        // Remove o dia se já existe
+        return {
+          ...prev,
+          workingDays: prev.workingDays.filter((_, i) => i !== existingDayIndex)
+        }
+      } else {
+        // Adiciona o dia se não existe
+        return {
+          ...prev,
+          workingDays: [...prev.workingDays, { dayOfWeek, startTime: '08:00', endTime: '17:00' }]
+        }
+      }
+    })
   }
 
-  const removeWorkingDay = (index: number) => {
+  const updateWorkingDayTime = (dayOfWeek: number, field: 'startTime' | 'endTime', value: string) => {
     setFormData(prev => ({
       ...prev,
-      workingDays: prev.workingDays.filter((_, i) => i !== index)
-    }))
-  }
-
-  const updateWorkingDay = (index: number, field: keyof WorkingDay, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      workingDays: prev.workingDays.map((day, i) => 
-        i === index ? { ...day, [field]: value } : day
+      workingDays: prev.workingDays.map(day => 
+        day.dayOfWeek === dayOfWeek ? { ...day, [field]: value } : day
       )
     }))
+  }
+
+  const isDaySelected = (dayOfWeek: number) => {
+    return formData.workingDays.some(day => day.dayOfWeek === dayOfWeek)
+  }
+
+  const getDayTimes = (dayOfWeek: number) => {
+    return formData.workingDays.find(day => day.dayOfWeek === dayOfWeek) || { startTime: '08:00', endTime: '17:00' }
   }
 
   const formatWorkingDays = (workingDays: WorkingDay[]) => {
@@ -282,6 +300,7 @@ export default function ProfissionaisPage() {
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Dr. João Silva"
                     required
                   />
                 </div>
@@ -292,6 +311,7 @@ export default function ProfissionaisPage() {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="joao.silva@email.com"
                     required
                   />
                 </div>
@@ -304,6 +324,7 @@ export default function ProfissionaisPage() {
                     id="crm"
                     value={formData.crm}
                     onChange={(e) => setFormData(prev => ({ ...prev, crm: e.target.value }))}
+                    placeholder="CRM/SP 123456"
                     required
                   />
                 </div>
@@ -313,17 +334,31 @@ export default function ProfissionaisPage() {
                     id="phone"
                     value={formData.phone}
                     onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="(11) 99999-9999"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="specialty">Especialidade</Label>
                   <Input
                     id="specialty"
                     value={formData.specialty}
                     onChange={(e) => setFormData(prev => ({ ...prev, specialty: e.target.value }))}
+                    placeholder="Cardiologia"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="consultationPrice">Valor da Consulta (R$)</Label>
+                  <Input
+                    id="consultationPrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.consultationPrice}
+                    onChange={(e) => setFormData(prev => ({ ...prev, consultationPrice: e.target.value }))}
+                    placeholder="150.00"
                   />
                 </div>
                 <div className="space-y-2">
@@ -338,60 +373,58 @@ export default function ProfissionaisPage() {
               </div>
 
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <Label>Dias e Horários de Atendimento</Label>
-                  <Button type="button" onClick={addWorkingDay} size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Adicionar Dia
-                  </Button>
+                <Label className="text-base font-medium">Dias e Horários de Atendimento</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  {DAYS_OF_WEEK.map(dayOption => {
+                    const isSelected = isDaySelected(dayOption.value)
+                    const dayTimes = getDayTimes(dayOption.value)
+                    
+                    return (
+                      <div key={dayOption.value} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            id={`day-${dayOption.value}`}
+                            checked={isSelected}
+                            onChange={() => toggleWorkingDay(dayOption.value)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                          <Label 
+                            htmlFor={`day-${dayOption.value}`} 
+                            className={`text-sm font-medium cursor-pointer ${
+                              isSelected ? 'text-gray-900' : 'text-gray-500'
+                            }`}
+                          >
+                            {dayOption.label}
+                          </Label>
+                        </div>
+                        
+                        {isSelected && (
+                          <div className="space-y-3 ml-7">
+                            <div className="space-y-2">
+                              <Label className="text-xs text-gray-600">Horário de Início</Label>
+                              <Input
+                                type="time"
+                                value={dayTimes.startTime}
+                                onChange={(e) => updateWorkingDayTime(dayOption.value, 'startTime', e.target.value)}
+                                className="text-sm"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs text-gray-600">Horário de Fim</Label>
+                              <Input
+                                type="time"
+                                value={dayTimes.endTime}
+                                onChange={(e) => updateWorkingDayTime(dayOption.value, 'endTime', e.target.value)}
+                                className="text-sm"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
-                
-                {formData.workingDays.map((day, index) => (
-                  <div key={index} className="grid grid-cols-4 gap-2 items-end">
-                    <div className="space-y-2">
-                      <Label>Dia da Semana</Label>
-                      <Select
-                        value={day.dayOfWeek.toString()}
-                        onValueChange={(value) => updateWorkingDay(index, 'dayOfWeek', parseInt(value))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {DAYS_OF_WEEK.map(dayOption => (
-                            <SelectItem key={dayOption.value} value={dayOption.value.toString()}>
-                              {dayOption.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Início</Label>
-                      <Input
-                        type="time"
-                        value={day.startTime}
-                        onChange={(e) => updateWorkingDay(index, 'startTime', e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Fim</Label>
-                      <Input
-                        type="time"
-                        value={day.endTime}
-                        onChange={(e) => updateWorkingDay(index, 'endTime', e.target.value)}
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeWorkingDay(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
               </div>
 
               <div className="flex justify-end gap-2 pt-4">

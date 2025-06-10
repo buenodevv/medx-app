@@ -11,7 +11,7 @@ interface ClinicGuardProps {
   children: React.ReactNode
 }
 
-const publicRoutes = ['/sign-in', '/sign-up', '/create-clinic']
+const publicRoutes = ['/', '/sign-in', '/sign-up', '/create-clinic']
 
 export function ClinicGuard({ children }: ClinicGuardProps) {
   const { user, isLoaded } = useUser()
@@ -21,7 +21,12 @@ export function ClinicGuard({ children }: ClinicGuardProps) {
   const [loading, setLoading] = useState(true)
 
   // Verificar se é uma rota pública
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
+  const isPublicRoute = publicRoutes.some(route => {
+    if (route === '/') {
+      return pathname === '/'
+    }
+    return pathname.startsWith(route)
+  })
 
   useEffect(() => {
     if (isPublicRoute) {
@@ -110,7 +115,7 @@ export function ClinicGuard({ children }: ClinicGuardProps) {
 // Função para obter o título da página baseado na rota
 function getPageTitle(pathname: string): string {
   const routes: Record<string, string> = {
-    '/': 'Dashboard',
+    '/dashboard': 'Dashboard',
     '/pacientes': 'Pacientes',
     '/agenda': 'Agenda',
     '/profissionais': 'Profissionais',

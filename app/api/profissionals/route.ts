@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, phone, email, crm, image, specialty, workingDays } = body
+    const { name, phone, email, crm, image, specialty, consultationPrice, workingDays } = body
 
     // Validações básicas
     if (!name || !email || !crm) {
@@ -120,6 +120,7 @@ export async function POST(request: NextRequest) {
         crm,
         image,
         specialty,
+        consultationPrice: consultationPrice ? parseFloat(consultationPrice) : null,
         clinicId: user.clinicId,
         workingDays: {
           create: workingDays?.map((day: any) => ({

@@ -12,7 +12,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 const navigation = [
   {
     name: "Dashboard",
-    href: "/",
+    href: "/dashboard",
     icon: LayoutDashboard,
   },
   {
