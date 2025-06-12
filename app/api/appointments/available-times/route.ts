@@ -45,8 +45,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Verificar o dia da semana da data selecionada
-    const selectedDate = new Date(date)
+    const selectedDate = new Date(date + 'T12:00:00.000Z') // Adicionar horário para evitar problemas de timezone
     const dayOfWeek = selectedDate.getDay() // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
+    
+    console.log('Data selecionada:', {
+      date,
+      selectedDate: selectedDate.toISOString(),
+      dayOfWeek,
+      dayName: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][dayOfWeek]
+    })
 
     // Buscar o dia de trabalho correspondente
     const workingDay = profissional.workingDays.find(day => day.dayOfWeek === dayOfWeek)
@@ -80,6 +87,16 @@ export async function GET(request: NextRequest) {
 
     const bookedTimes = existingAppointments.map(apt => apt.time)
     const availableTimes = timeSlots.filter(time => !bookedTimes.includes(time))
+
+    console.log('API - Horários disponíveis:', {
+      profissionalId,
+      date,
+      dayOfWeek,
+      workingDay: workingDay ? { startTime: workingDay.startTime, endTime: workingDay.endTime } : null,
+      timeSlots,
+      bookedTimes,
+      availableTimes
+    })
 
     return NextResponse.json({ availableTimes })
   } catch (error) {

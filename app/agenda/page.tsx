@@ -119,11 +119,26 @@ export default function AgendaPage() {
   const fetchAvailableTimes = async (profissionalId: string, date: Date) => {
     try {
       const dateStr = date.toISOString().split('T')[0]
+      console.log('Frontend - Buscando horários para:', { profissionalId, dateStr })
       const response = await fetch(`/api/appointments/available-times?profissionalId=${profissionalId}&date=${dateStr}`)
-      if (response.ok) {
-        const data = await response.json()
-        setAvailableTimes(data.availableTimes)
+      
+      console.log('Frontend - Response status:', response.status)
+      
+      if (!response.ok) {
+        console.error('Frontend - Erro ao buscar horários:', response.statusText)
+        setAvailableTimes([])
+        return
       }
+      
+      const data = await response.json()
+      console.log('Frontend - Dados completos recebidos:', data)
+      console.log('Frontend - availableTimes array:', data.availableTimes)
+      console.log('Frontend - Tipo de availableTimes:', typeof data.availableTimes)
+      console.log('Frontend - Length de availableTimes:', data.availableTimes?.length)
+      
+      const times = data.availableTimes || []
+      console.log('Frontend - Times que serão setados:', times)
+      setAvailableTimes(times)
     } catch (error) {
       console.error('Erro ao buscar horários disponíveis:', error)
       setAvailableTimes([])
@@ -303,9 +318,9 @@ export default function AgendaPage() {
                               </SelectItem>
                             ))
                           ) : (
-                            <SelectItem value="" disabled>
+                            <div className="px-2 py-1.5 text-sm text-muted-foreground">
                               {patientSearch ? 'Nenhum paciente encontrado' : 'Carregando pacientes...'}
-                            </SelectItem>
+                            </div>
                           )}
                         </SelectContent>
                       </Select>
@@ -337,57 +352,97 @@ export default function AgendaPage() {
                       </Select>
                     </div>
 
-                    {/* Calendário */}
+                    {/* Calendário e Horários lado a lado */}
                     {selectedProfissional && selectedProfissionalData && (
-                      <div className="grid gap-2">
-                        <Label>Data</Label>
-                        <div className="border rounded-md p-3">
-                          <Calendar 
-                            mode="single" 
-                            selected={selectedDate} 
-                            onSelect={setSelectedDate}
-                            disabled={(date) => {
-                              // Desabilitar datas passadas
-                              if (date < new Date()) return true
-                              // Desabilitar dias em que o profissional não trabalha
-                              return !isProfissionalAvailableOnDate(selectedProfissionalData, date)
-                            }}
-                            className="rounded-md"
-                          />
-                        </div>
-                        {selectedProfissionalData.workingDays.length > 0 && (
-                          <div className="text-sm text-muted-foreground">
-                            <strong>Dias de atendimento:</strong> {selectedProfissionalData.workingDays.map(day => {
-                              const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
-                              return `${dayNames[day.dayOfWeek]} (${day.startTime} - ${day.endTime})`
-                            }).join(', ')}
+                      <div className="grid gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Calendário */}
+                          <div className="space-y-2">
+                            <Label>Data</Label>
+                            <div className="border rounded-md p-3">
+                              <Calendar 
+                                mode="single" 
+                                selected={selectedDate} 
+                                onSelect={setSelectedDate}
+                                disabled={(date) => {
+                                  // Desabilitar datas passadas
+                                  if (date < new Date()) return true
+                                  // Desabilitar dias em que o profissional não trabalha
+                                  return !isProfissionalAvailableOnDate(selectedProfissionalData, date)
+                                }}
+                                className="rounded-md"
+                              />
+                            </div>
+                            {selectedProfissionalData.workingDays.length > 0 && (
+                              <div className="text-sm text-muted-foreground">
+                                <strong>Dias de atendimento:</strong> {selectedProfissionalData.workingDays.map(day => {
+                                  const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+                                  return `${dayNames[day.dayOfWeek]} (${day.startTime} - ${day.endTime})`
+                                }).join(', ')}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    )}
 
-                    {/* Horários Disponíveis */}
-                    {selectedDate && availableTimes.length > 0 && (
-                      <div className="grid gap-2">
-                        <Label>Horário</Label>
-                        <Select value={selectedTime} onValueChange={setSelectedTime}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecionar horário" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableTimes.map((time) => (
-                              <SelectItem key={time} value={time}>
-                                {time}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-
-                    {selectedDate && availableTimes.length === 0 && selectedProfissional && (
-                      <div className="text-sm text-muted-foreground bg-yellow-50 p-3 rounded-md">
-                        Nenhum horário disponível para esta data.
+                          {/* Horários Disponíveis */}
+                          <div className="space-y-2">
+                            <Label>Horários Disponíveis</Label>
+                            <div className="border rounded-md p-3 min-h-[280px]">
+                              {!selectedDate && (
+                                <div className="flex items-center justify-center h-full text-muted-foreground">
+                                  <div className="text-center">
+                                    <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                    <p>Selecione uma data para ver os horários</p>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {selectedDate && availableTimes.length === 0 && (
+                                <div className="flex items-center justify-center h-full">
+                                  <div className="text-center text-muted-foreground">
+                                    <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                    <p>Nenhum horário disponível</p>
+                                    <p className="text-sm">para esta data</p>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {selectedDate && availableTimes.length > 0 && (
+                                <div className="space-y-2">
+                                  <p className="text-sm font-medium mb-3">
+                                    {selectedDate.toLocaleDateString('pt-BR', { 
+                                      weekday: 'long', 
+                                      year: 'numeric', 
+                                      month: 'long', 
+                                      day: 'numeric' 
+                                    })}
+                                  </p>
+                                  <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto">
+                                    {availableTimes.map((time) => (
+                                      <button
+                                        key={time}
+                                        onClick={() => setSelectedTime(time)}
+                                        className={`p-2 text-sm border rounded-md transition-colors ${
+                                          selectedTime === time
+                                            ? 'bg-primary text-primary-foreground border-primary'
+                                            : 'hover:bg-muted border-border'
+                                        }`}
+                                      >
+                                        {time}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  {selectedTime && (
+                                    <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-md">
+                                      <p className="text-sm text-green-800">
+                                        <strong>Horário selecionado:</strong> {selectedTime}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
 
