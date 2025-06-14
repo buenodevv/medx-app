@@ -11,5 +11,3 @@ README.md
 *.log
 dev.db
 .trae
-pnpm-lock.yaml
-*.log
