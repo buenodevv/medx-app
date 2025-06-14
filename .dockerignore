@@ -8,5 +8,8 @@ README.md
 .gitignore
 .next
 .vercel
+*.log
+dev.db
+.trae
 pnpm-lock.yaml
 *.log
