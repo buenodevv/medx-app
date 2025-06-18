@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { AppointmentStatus } from '@prisma/client'
+import { whatsappService } from '@/lib/whatsapp-service'
 
 export async function GET(request: NextRequest) {
   try {
@@ -156,9 +157,29 @@ export async function POST(request: NextRequest) {
             name: true,
             specialty: true
           }
+        },
+        clinic: {
+          select: {
+            name: true
+          }
         }
       }
     })
+
+    // Enviar notificação WhatsApp (não bloqueia a resposta)
+    if (appointment.patient.phone) {
+      whatsappService.sendAppointmentNotification({
+        patientPhone: appointment.patient.phone,
+        patientName: appointment.patient.name,
+        doctorName: appointment.profissional.name,
+        date: appointment.date.toISOString(),
+        time: appointment.time,
+        clinicName: appointment.clinic.name
+      }).catch(error => {
+        console.error('Erro ao enviar notificação WhatsApp:', error)
+        // Log do erro mas não falha a criação do agendamento
+      })
+    }
 
     return NextResponse.json(appointment, { status: 201 })
   } catch (error) {
