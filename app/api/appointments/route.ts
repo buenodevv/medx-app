@@ -167,18 +167,32 @@ export async function POST(request: NextRequest) {
     })
 
     // Enviar notificação WhatsApp (não bloqueia a resposta)
+    console.log('🔍 DEBUG: Verificando envio WhatsApp...')
+    console.log('📱 Telefone do paciente:', appointment.patient.phone)
+    
     if (appointment.patient.phone) {
-      whatsappService.sendAppointmentNotification({
+      console.log('✅ Telefone encontrado, iniciando envio...')
+      
+      const whatsappData = {
         patientPhone: appointment.patient.phone,
         patientName: appointment.patient.name,
         doctorName: appointment.profissional.name,
         date: appointment.date.toISOString(),
         time: appointment.time,
         clinicName: appointment.clinic.name
-      }).catch(error => {
-        console.error('Erro ao enviar notificação WhatsApp:', error)
-        // Log do erro mas não falha a criação do agendamento
-      })
+      }
+      
+      console.log('📋 Dados para WhatsApp:', JSON.stringify(whatsappData, null, 2))
+      
+      try {
+        const result = await whatsappService.sendAppointmentNotification(whatsappData)
+        console.log('📤 Resultado do envio WhatsApp:', result)
+      } catch (error) {
+        console.error('❌ Erro detalhado ao enviar notificação WhatsApp:', error)
+        console.error('📊 Stack trace:', (error as Error).stack)
+      }
+    } else {
+      console.log('❌ Telefone do paciente não encontrado ou vazio')
     }
 
     return NextResponse.json(appointment, { status: 201 })

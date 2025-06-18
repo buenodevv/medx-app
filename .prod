@@ -1,0 +1,13 @@
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_YWxsb3dpbmcta2F0eWRpZC0xNy5jbGVyay5hY2NvdW50cy5kZXYk
+CLERK_SECRET_KEY=sk_test_22VHJ1uuthxCn9wprybqjPvJueA75tAuqkGP1iATlX
+
+DATABASE_URL=postgres://postgres:123@161.97.125.178:5432/zello-app?sslmode=disable
+
+# URL base da sua instância da Evolution API
+EVOLUTION_API_URL=https://zello-app-evolution-api.r3nm2s.easypanel.host
+
+# Chave de acesso da sua Evolution API
+EVOLUTION_API_KEY=429683C4C977415CAAFCCE10F7D57E11
+
+# ID da instância que você vai usar
+EVOLUTION_API_INSTANCE=teste

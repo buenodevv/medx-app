@@ -18,6 +18,12 @@ class WhatsAppService {
     this.baseUrl = process.env.EVOLUTION_API_URL || '';
     this.instanceName = process.env.EVOLUTION_API_INSTANCE || '';
     this.apiKey = process.env.EVOLUTION_API_KEY || '';
+    
+    // Debug das variáveis de ambiente
+    console.log('🔧 WhatsApp Service - Configurações:');
+    console.log('🌐 Base URL:', this.baseUrl || 'NÃO DEFINIDA');
+    console.log('🏷️ Instance:', this.instanceName || 'NÃO DEFINIDA');
+    console.log('🔑 API Key:', this.apiKey ? '***DEFINIDA***' : 'NÃO DEFINIDA');
   }
 
   private formatPhoneNumber(phone: string): string {
@@ -65,42 +71,67 @@ class WhatsAppService {
     clinicName: string;
   }): Promise<EvolutionAPIResponse> {
     try {
+      console.log('🚀 Iniciando envio de notificação WhatsApp...');
+      
       if (!this.baseUrl || !this.instanceName || !this.apiKey) {
+        const missingVars = [];
+        if (!this.baseUrl) missingVars.push('EVOLUTION_API_URL');
+        if (!this.instanceName) missingVars.push('EVOLUTION_API_INSTANCE');
+        if (!this.apiKey) missingVars.push('EVOLUTION_API_KEY');
+        
+        console.error('❌ Variáveis de ambiente faltando:', missingVars.join(', '));
         console.warn('EvolutionAPI não configurada. Variáveis de ambiente necessárias: EVOLUTION_API_URL, EVOLUTION_API_INSTANCE, EVOLUTION_API_KEY');
         return { success: false, error: 'EvolutionAPI não configurada' };
       }
 
       if (!data.patientPhone) {
+        console.error('❌ Telefone do paciente não informado');
         console.warn('Telefone do paciente não informado');
         return { success: false, error: 'Telefone do paciente não informado' };
       }
 
       const formattedPhone = this.formatPhoneNumber(data.patientPhone);
+      console.log('📱 Telefone formatado:', formattedPhone);
+      
       const message = this.createAppointmentMessage(data);
+      console.log('💬 Mensagem criada (primeiros 100 chars):', message.substring(0, 100) + '...');
+      
+      const requestUrl = `${this.baseUrl}/message/sendText/${this.instanceName}`;
+      console.log('🌐 URL da requisição:', requestUrl);
+      
+      const requestBody = {
+        number: formattedPhone,
+        text: message,
+      };
+      console.log('📦 Corpo da requisição:', JSON.stringify(requestBody, null, 2));
 
-      const response = await fetch(`${this.baseUrl}/message/sendText/${this.instanceName}`, {
+      const response = await fetch(requestUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': this.apiKey,
         },
-        body: JSON.stringify({
-          number: formattedPhone,
-          text: message,
-        }),
+        body: JSON.stringify(requestBody),
       });
+      
+      console.log('📡 Status da resposta:', response.status);
+      console.log('📋 Headers da resposta:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const errorData = await response.text();
+        console.error('❌ Erro na resposta da API:', errorData);
         console.error('Erro ao enviar mensagem WhatsApp:', errorData);
         return { success: false, error: `Erro HTTP: ${response.status}` };
       }
 
       const result = await response.json();
+      console.log('✅ Resposta da API (sucesso):', result);
       console.log('Mensagem WhatsApp enviada com sucesso:', result);
       
       return { success: true, message: 'Notificação enviada com sucesso' };
     } catch (error) {
+      console.error('💥 Erro crítico no envio:', error);
+      console.error('📊 Stack trace completo:', (error as Error).stack);
       console.error('Erro ao enviar notificação WhatsApp:', error);
       return { success: false, error: 'Erro interno ao enviar notificação' };
     }
