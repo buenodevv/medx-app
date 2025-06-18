@@ -38,6 +38,44 @@ class WhatsAppService {
     return cleanPhone;
   }
 
+  // Função utilitária para formatar data de forma segura
+  private formatDateSafely(dateString: string): string {
+    try {
+      console.log('📅 Data original recebida:', dateString);
+      
+      // Remove qualquer informação de horário e força interpretação como data local
+      const dateOnly = dateString.split('T')[0]; // Pega apenas YYYY-MM-DD
+      console.log('📅 Data limpa:', dateOnly);
+      
+      // Divide a data em partes
+      const [year, month, day] = dateOnly.split('-').map(Number);
+      console.log('📅 Partes da data:', { year, month, day });
+      
+      // Cria a data usando o construtor que não sofre com fuso horário
+      // Mês é 0-indexado no JavaScript, por isso month - 1
+      const date = new Date(year, month - 1, day);
+      console.log('📅 Data criada:', date);
+      
+      // Verifica se a data é válida
+      if (isNaN(date.getTime())) {
+        console.error('❌ Data inválida criada');
+        return dateString;
+      }
+      
+      const formatted = date.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      
+      console.log('📅 Data formatada final:', formatted);
+      return formatted;
+    } catch (error) {
+      console.error('❌ Erro ao formatar data:', error);
+      return dateString; // Retorna a string original em caso de erro
+    }
+  }
+
   private createAppointmentMessage(data: {
     patientName: string;
     doctorName: string;
@@ -45,7 +83,7 @@ class WhatsAppService {
     time: string;
     clinicName: string;
   }): string {
-    const formattedDate = new Date(data.date).toLocaleDateString('pt-BR');
+    const formattedDate = this.formatDateSafely(data.date);
     
     return `🏥 *Agendamento Confirmado*\n\n` +
            `Olá *${data.patientName}*!\n\n` +
@@ -155,7 +193,7 @@ class WhatsAppService {
       }
 
       const formattedPhone = this.formatPhoneNumber(data.patientPhone);
-      const formattedDate = new Date(data.date).toLocaleDateString('pt-BR');
+      const formattedDate = this.formatDateSafely(data.date);
       
       const reminderMessage = `🔔 *Lembrete de Consulta*\n\n` +
                              `Olá *${data.patientName}*!\n\n` +
