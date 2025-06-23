@@ -231,6 +231,158 @@ class WhatsAppService {
       return { success: false, error: 'Erro interno ao enviar lembrete' };
     }
   }
+
+  // Remover a função createConfirmationMessage e sendConfirmationRequest
+  // Substituir por uma função simples de texto
+  async sendSimpleConfirmationRequest(data: {
+    patientPhone: string;
+    patientName: string;
+    doctorName: string;
+    date: string;
+    time: string;
+    clinicName: string;
+    appointmentId: string;
+  }): Promise<EvolutionAPIResponse> {
+    try {
+      console.log('🚀 Iniciando envio de confirmação WhatsApp (texto simples)...');
+      
+      if (!this.baseUrl || !this.instanceName || !this.apiKey) {
+        const missingVars = [];
+        if (!this.baseUrl) missingVars.push('EVOLUTION_API_URL');
+        if (!this.instanceName) missingVars.push('EVOLUTION_API_INSTANCE');
+        if (!this.apiKey) missingVars.push('EVOLUTION_API_KEY');
+        
+        console.error('❌ Variáveis de ambiente faltando:', missingVars.join(', '));
+        return { success: false, error: 'EvolutionAPI não configurada' };
+      }
+
+      if (!data.patientPhone) {
+        console.error('❌ Telefone do paciente não informado');
+        return { success: false, error: 'Telefone do paciente não informado' };
+      }
+
+      const formattedPhone = this.formatPhoneNumber(data.patientPhone);
+      const formattedDate = this.formatDateSafely(data.date);
+      
+      const message = `🔔 *Confirmação de Consulta*\n\n` +
+                     `Olá *${data.patientName}*!\n\n` +
+                     `Você tem uma consulta agendada para amanhã:\n\n` +
+                     `👨‍⚕️ *Profissional:* ${data.doctorName}\n` +
+                     `📅 *Data:* ${formattedDate}\n` +
+                     `🕐 *Horário:* ${data.time}\n` +
+                     `🏥 *Clínica:* ${data.clinicName}\n\n` +
+                     `Por favor, responda com:\n` +
+                     `✅ *CONFIRMAR* - para confirmar sua presença\n` +
+                     `❌ *CANCELAR* - para cancelar o agendamento`;
+      
+      return await this.sendSimpleMessage(formattedPhone, message);
+    } catch (error) {
+      console.error('❌ Erro ao enviar confirmação:', error);
+      return { success: false, error: 'Erro interno ao enviar confirmação' };
+    }
+  }
+
+  // Método de fallback para mensagem simples
+  private async sendSimpleConfirmation(data: {
+    patientPhone: string;
+    patientName: string;
+    doctorName: string;
+    date: string;
+    time: string;
+    clinicName: string;
+    appointmentId: string;
+  }): Promise<EvolutionAPIResponse> {
+    const formattedPhone = this.formatPhoneNumber(data.patientPhone);
+    const formattedDate = this.formatDateSafely(data.date);
+    
+    const message = `🔔 *Confirmação de Consulta*\n\n` +
+                   `Olá *${data.patientName}*!\n\n` +
+                   `Você tem uma consulta agendada para amanhã:\n\n` +
+                   `👨‍⚕️ *Profissional:* ${data.doctorName}\n` +
+                   `📅 *Data:* ${formattedDate}\n` +
+                   `🕐 *Horário:* ${data.time}\n` +
+                   `🏥 *Clínica:* ${data.clinicName}\n\n` +
+                   `Por favor, responda:\n` +
+                   `✅ Digite "CONFIRMAR" para confirmar\n` +
+                   `❌ Digite "CANCELAR" para cancelar\n\n` +
+                   `ID: ${data.appointmentId}`;
+    
+    const requestUrl = `${this.baseUrl}/message/sendText/${this.instanceName}`;
+    
+    const response = await fetch(requestUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': this.apiKey,
+      },
+      body: JSON.stringify({
+        number: formattedPhone,
+        text: message
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.text();
+      return { success: false, error: `Erro HTTP: ${response.status} - ${errorData}` };
+    }
+
+    const result = await response.json();
+    return { success: true, message: 'Confirmação enviada como mensagem simples' };
+  }
+
+  // Adicionar esta função DENTRO da classe WhatsAppService
+  async sendSimpleMessage(phone: string, message: string): Promise<EvolutionAPIResponse> {
+    try {
+      console.log('🚀 Enviando mensagem simples para:', phone);
+      
+      if (!this.baseUrl || !this.instanceName || !this.apiKey) {
+        console.error('❌ EvolutionAPI não configurada');
+        return { success: false, error: 'EvolutionAPI não configurada' };
+      }
+
+      if (!phone) {
+        console.error('❌ Telefone não informado');
+        return { success: false, error: 'Telefone não informado' };
+      }
+
+      const formattedPhone = this.formatPhoneNumber(phone);
+      console.log('📱 Telefone formatado:', formattedPhone);
+      
+      const requestUrl = `${this.baseUrl}/message/sendText/${this.instanceName}`;
+      console.log('🌐 URL da requisição:', requestUrl);
+      
+      const requestBody = {
+        number: formattedPhone,
+        text: message,
+      };
+      console.log('📦 Enviando mensagem:', message);
+
+      const response = await fetch(requestUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': this.apiKey,
+        },
+        body: JSON.stringify(requestBody),
+      });
+      
+      console.log('📡 Status da resposta:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('❌ Erro na resposta da API:', errorData);
+        return { success: false, error: `Erro HTTP: ${response.status}` };
+      }
+
+      const result = await response.json();
+      console.log('✅ Mensagem enviada com sucesso:', result);
+      
+      return { success: true, message: 'Mensagem enviada com sucesso' };
+    } catch (error) {
+      console.error('💥 Erro ao enviar mensagem:', error);
+      return { success: false, error: 'Erro interno ao enviar mensagem' };
+    }
+  }
 }
 
 export const whatsappService = new WhatsAppService();

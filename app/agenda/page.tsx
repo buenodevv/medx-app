@@ -285,11 +285,11 @@ export default function AgendaPage() {
                     Novo Agendamento
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                <DialogContent className="sm:max-w-[800px] max-h-[95vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Novo Agendamento</DialogTitle>
                   </DialogHeader>
-                  <div className="grid gap-4 py-4">
+                  <div className="grid gap-6 py-4">
                     {/* Seleção de Paciente */}
                     <div className="grid gap-2">
                       <Label htmlFor="patient">Paciente</Label>
@@ -352,29 +352,53 @@ export default function AgendaPage() {
                       </Select>
                     </div>
 
-                    {/* Calendário e Horários lado a lado */}
+                    {/* Calendário e Horários - Layout Melhorado */}
                     {selectedProfissional && selectedProfissionalData && (
-                      <div className="grid gap-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div className="grid gap-6 md:grid-cols-2">
                           {/* Calendário */}
-                          <div className="space-y-2">
-                            <Label>Data</Label>
-                            <div className="border rounded-md p-3">
-                              <Calendar 
-                                mode="single" 
-                                selected={selectedDate} 
-                                onSelect={setSelectedDate}
-                                disabled={(date) => {
-                                  // Desabilitar datas passadas
-                                  if (date < new Date()) return true
-                                  // Desabilitar dias em que o profissional não trabalha
-                                  return !isProfissionalAvailableOnDate(selectedProfissionalData, date)
-                                }}
-                                className="rounded-md"
-                              />
+                          <div className="space-y-3">
+                            <Label className="text-base font-medium">Selecionar Data</Label>
+                            <div className="flex justify-center">
+                              <div className="border rounded-lg p-3 bg-card">
+                                <Calendar 
+                                  mode="single" 
+                                  selected={selectedDate} 
+                                  onSelect={setSelectedDate}
+                                  disabled={(date) => {
+                                    // Desabilitar datas passadas
+                                    if (date < new Date()) return true
+                                    // Desabilitar dias em que o profissional não trabalha
+                                    return !isProfissionalAvailableOnDate(selectedProfissionalData, date)
+                                  }}
+                                  className="rounded-md"
+                                  classNames={{
+                                    months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                                    month: "space-y-4",
+                                    caption: "flex justify-center pt-1 relative items-center",
+                                    caption_label: "text-sm font-medium",
+                                    nav: "space-x-1 flex items-center",
+                                    nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+                                    nav_button_previous: "absolute left-1",
+                                    nav_button_next: "absolute right-1",
+                                    table: "w-full border-collapse space-y-1",
+                                    head_row: "flex",
+                                    head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]",
+                                    row: "flex w-full mt-2",
+                                    cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                                    day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100",
+                                    day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                                    day_today: "bg-accent text-accent-foreground",
+                                    day_outside: "text-muted-foreground opacity-50",
+                                    day_disabled: "text-muted-foreground opacity-50",
+                                    day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                                    day_hidden: "invisible",
+                                  }}
+                                />
+                              </div>
                             </div>
                             {selectedProfissionalData.workingDays.length > 0 && (
-                              <div className="text-sm text-muted-foreground">
+                              <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
                                 <strong>Dias de atendimento:</strong> {selectedProfissionalData.workingDays.map(day => {
                                   const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
                                   return `${dayNames[day.dayOfWeek]} (${day.startTime} - ${day.endTime})`
@@ -384,14 +408,15 @@ export default function AgendaPage() {
                           </div>
 
                           {/* Horários Disponíveis */}
-                          <div className="space-y-2">
-                            <Label>Horários Disponíveis</Label>
-                            <div className="border rounded-md p-3 min-h-[280px]">
+                          <div className="space-y-3">
+                            <Label className="text-base font-medium">Horários Disponíveis</Label>
+                            <div className="border rounded-lg p-4 min-h-[320px] bg-card">
                               {!selectedDate && (
                                 <div className="flex items-center justify-center h-full text-muted-foreground">
                                   <div className="text-center">
-                                    <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                    <p>Selecione uma data para ver os horários</p>
+                                    <Clock className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                                    <p className="font-medium">Selecione uma data</p>
+                                    <p className="text-sm">para ver os horários disponíveis</p>
                                   </div>
                                 </div>
                               )}
@@ -399,32 +424,34 @@ export default function AgendaPage() {
                               {selectedDate && availableTimes.length === 0 && (
                                 <div className="flex items-center justify-center h-full">
                                   <div className="text-center text-muted-foreground">
-                                    <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                    <p>Nenhum horário disponível</p>
+                                    <Clock className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                                    <p className="font-medium">Nenhum horário disponível</p>
                                     <p className="text-sm">para esta data</p>
                                   </div>
                                 </div>
                               )}
                               
                               {selectedDate && availableTimes.length > 0 && (
-                                <div className="space-y-2">
-                                  <p className="text-sm font-medium mb-3">
-                                    {selectedDate.toLocaleDateString('pt-BR', { 
-                                      weekday: 'long', 
-                                      year: 'numeric', 
-                                      month: 'long', 
-                                      day: 'numeric' 
-                                    })}
-                                  </p>
-                                  <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto">
+                                <div className="space-y-3">
+                                  <div className="text-center p-2 bg-primary/10 rounded-md">
+                                    <p className="text-sm font-medium text-primary">
+                                      {selectedDate.toLocaleDateString('pt-BR', { 
+                                        weekday: 'long', 
+                                        year: 'numeric', 
+                                        month: 'long', 
+                                        day: 'numeric' 
+                                      })}
+                                    </p>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-2 max-h-[220px] overflow-y-auto">
                                     {availableTimes.map((time) => (
                                       <button
                                         key={time}
                                         onClick={() => setSelectedTime(time)}
-                                        className={`p-2 text-sm border rounded-md transition-colors ${
+                                        className={`p-2 text-sm border rounded-md transition-all duration-200 hover:scale-105 ${
                                           selectedTime === time
-                                            ? 'bg-primary text-primary-foreground border-primary'
-                                            : 'hover:bg-muted border-border'
+                                            ? 'bg-primary text-primary-foreground border-primary shadow-md'
+                                            : 'hover:bg-muted border-border hover:border-primary/50'
                                         }`}
                                       >
                                         {time}
@@ -432,9 +459,9 @@ export default function AgendaPage() {
                                     ))}
                                   </div>
                                   {selectedTime && (
-                                    <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-md">
-                                      <p className="text-sm text-green-800">
-                                        <strong>Horário selecionado:</strong> {selectedTime}
+                                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+                                      <p className="text-sm text-green-800 text-center">
+                                        <strong>✓ Horário selecionado:</strong> {selectedTime}
                                       </p>
                                     </div>
                                   )}
@@ -448,29 +475,35 @@ export default function AgendaPage() {
 
                     {/* Observações */}
                     <div className="grid gap-2">
-                      <Label htmlFor="notes">Observações</Label>
+                      <Label htmlFor="notes">Observações (opcional)</Label>
                       <Textarea 
-                        id="notes" 
-                        placeholder="Observações sobre o agendamento..." 
-                        rows={3}
+                        id="notes"
+                        placeholder="Observações sobre o agendamento..."
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
+                        className="min-h-[80px] resize-none"
                       />
                     </div>
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => {
-                      setIsDialogOpen(false)
-                      resetForm()
-                    }}>
-                      Cancelar
-                    </Button>
-                    <Button 
-                      onClick={handleCreateAppointment}
-                      disabled={loading || !selectedPatient || !selectedProfissional || !selectedDate || !selectedTime}
-                    >
-                      {loading ? 'Salvando...' : 'Salvar Agendamento'}
-                    </Button>
+
+                    {/* Botões de Ação */}
+                    <div className="flex justify-end gap-3 pt-4 border-t">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setIsDialogOpen(false)
+                          resetForm()
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button 
+                        onClick={handleCreateAppointment}
+                        disabled={!selectedPatient || !selectedProfissional || !selectedDate || !selectedTime || loading}
+                        className="min-w-[120px]"
+                      >
+                        {loading ? 'Criando...' : 'Criar Agendamento'}
+                      </Button>
+                    </div>
                   </div>
                 </DialogContent>
               </Dialog>

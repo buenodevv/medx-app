@@ -166,6 +166,8 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    // Comentar ou remover esta seção
+    /*
     // Enviar notificação WhatsApp (não bloqueia a resposta)
     console.log('🔍 DEBUG: Verificando envio WhatsApp...')
     console.log('📱 Telefone do paciente:', appointment.patient.phone)
@@ -194,6 +196,7 @@ export async function POST(request: NextRequest) {
     } else {
       console.log('❌ Telefone do paciente não encontrado ou vazio')
     }
+    */
 
     return NextResponse.json(appointment, { status: 201 })
   } catch (error) {
