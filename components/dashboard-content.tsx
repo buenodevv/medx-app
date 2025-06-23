@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useUser } from '@clerk/nextjs'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -61,7 +62,15 @@ interface WorkingDay {
   endTime: string
 }
 
-export default function Dashboard() {
+interface DashboardContentProps {
+  clinicId?: string
+  clinicName?: string
+}
+
+export default function DashboardContent({ clinicId: propClinicId, clinicName: propClinicName }: DashboardContentProps = {}) {
+  const { user } = useUser()
+  const [clinicData, setClinicData] = useState<{id: string, name: string} | null>(null)
+  
   const [stats, setStats] = useState<DashboardStats>({
     totalPatients: 0,
     todayAppointments: 0,
@@ -75,9 +84,9 @@ export default function Dashboard() {
   const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [appointmentLoading, setAppointmentLoading] = useState(false)
-  const [patientLoading, setPatientLoading] = useState(false) // Novo estado para loading do paciente
+  const [patientLoading, setPatientLoading] = useState(false)
 
-  // Estados do modal de agendamento (reutilizando da agenda)
+  // Estados do modal de agendamento
   const [selectedPatient, setSelectedPatient] = useState<string>('')
   const [selectedProfissional, setSelectedProfissional] = useState<string>('')
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
@@ -99,14 +108,14 @@ export default function Dashboard() {
   // Buscar dados do dashboard
   useEffect(() => {
     fetchDashboardData()
-  }, [])
+  }, [clinicId])
 
-  // Buscar pacientes com filtro (reutilizado da agenda)
+  // Buscar pacientes com filtro
   const fetchPatients = async (search: string = '') => {
     try {
       const url = search 
-        ? `/api/patients?search=${encodeURIComponent(search)}`
-        : '/api/patients'
+        ? `/api/patients?search=${encodeURIComponent(search)}&clinicId=${clinicId}`
+        : `/api/patients?clinicId=${clinicId}`
       const response = await fetch(url)
       if (response.ok) {
         const data = await response.json()
@@ -117,10 +126,10 @@ export default function Dashboard() {
     }
   }
 
-  // Buscar profissionais (reutilizado da agenda)
+  // Buscar profissionais
   const fetchProfissionals = async () => {
     try {
-      const response = await fetch('/api/profissionals')
+      const response = await fetch(`/api/profissionals?clinicId=${clinicId}`)
       if (response.ok) {
         const data = await response.json()
         setProfessionals(data)
@@ -130,11 +139,11 @@ export default function Dashboard() {
     }
   }
 
-  // Buscar horários disponíveis (reutilizado da agenda)
+  // Buscar horários disponíveis
   const fetchAvailableTimes = async (profissionalId: string, date: Date) => {
     try {
       const dateStr = date.toISOString().split('T')[0]
-      const response = await fetch(`/api/appointments/available-times?profissionalId=${profissionalId}&date=${dateStr}`)
+      const response = await fetch(`/api/appointments/available-times?profissionalId=${profissionalId}&date=${dateStr}&clinicId=${clinicId}`)
       
       if (!response.ok) {
         setAvailableTimes([])
@@ -150,13 +159,13 @@ export default function Dashboard() {
     }
   }
 
-  // Verificar se o profissional trabalha no dia selecionado (reutilizado da agenda)
+  // Verificar se o profissional trabalha no dia selecionado
   const isProfissionalAvailableOnDate = (profissional: Professional, date: Date): boolean => {
     const dayOfWeek = date.getDay()
     return profissional.workingDays.some(day => day.dayOfWeek === dayOfWeek)
   }
 
-  // Criar agendamento (reutilizado da agenda)
+  // Criar agendamento
   const handleCreateAppointment = async () => {
     if (!selectedPatient || !selectedProfissional || !selectedDate || !selectedTime) {
       toast({
@@ -179,7 +188,8 @@ export default function Dashboard() {
           profissionalId: selectedProfissional,
           date: selectedDate.toISOString().split('T')[0],
           time: selectedTime,
-          notes: notes || undefined
+          notes: notes || undefined,
+          clinicId: clinicId
         })
       })
 
@@ -190,7 +200,7 @@ export default function Dashboard() {
         })
         setIsAppointmentDialogOpen(false)
         resetAppointmentForm()
-        fetchDashboardData() // Atualizar dados
+        fetchDashboardData()
       } else {
         const error = await response.json()
         toast({
@@ -210,7 +220,7 @@ export default function Dashboard() {
     }
   }
 
-  // Resetar formulário de agendamento (reutilizado da agenda)
+  // Resetar formulário de agendamento
   const resetAppointmentForm = () => {
     setSelectedPatient('')
     setSelectedProfissional('')
@@ -221,18 +231,18 @@ export default function Dashboard() {
     setAvailableTimes([])
   }
 
-  // Effects para busca de pacientes e horários (reutilizados da agenda)
+  // Effects para busca de pacientes e horários
   useEffect(() => {
     fetchPatients()
     fetchProfissionals()
-  }, [])
+  }, [clinicId])
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchPatients(patientSearch)
     }, 300)
     return () => clearTimeout(timeoutId)
-  }, [patientSearch])
+  }, [patientSearch, clinicId])
 
   useEffect(() => {
     if (selectedProfissional && selectedDate) {
@@ -240,7 +250,7 @@ export default function Dashboard() {
     } else {
       setAvailableTimes([])
     }
-  }, [selectedProfissional, selectedDate])
+  }, [selectedProfissional, selectedDate, clinicId])
 
   useEffect(() => {
     if (!selectedProfissional) {
@@ -261,15 +271,15 @@ export default function Dashboard() {
       
       // Buscar agendamentos de hoje
       const today = new Date().toISOString().split('T')[0]
-      const appointmentsRes = await fetch(`/api/appointments?date=${today}`)
+      const appointmentsRes = await fetch(`/api/appointments?date=${today}&clinicId=${clinicId}`)
       const appointmentsData = await appointmentsRes.json()
       
       // Buscar pacientes
-      const patientsRes = await fetch('/api/patients')
+      const patientsRes = await fetch(`/api/patients?clinicId=${clinicId}`)
       const patientsData = await patientsRes.json()
       
       // Buscar profissionais
-      const professionalsRes = await fetch('/api/profissionals')
+      const professionalsRes = await fetch(`/api/profissionals?clinicId=${clinicId}`)
       const professionalsData = await professionalsRes.json()
       
       setAppointments(appointmentsData)
@@ -283,7 +293,7 @@ export default function Dashboard() {
       setStats({
         totalPatients: patientsData.length,
         todayAppointments: appointmentsData.length,
-        avgConsultationTime: 30, // Valor padrão, pode ser calculado baseado nos dados reais
+        avgConsultationTime: 30,
         occupancyRate: Math.round((confirmedAppointments.length / Math.max(appointmentsData.length, 1)) * 100)
       })
     } catch (error) {
@@ -299,14 +309,17 @@ export default function Dashboard() {
   }
 
   const onSubmitPatient = async (data: any) => {
-    setPatientLoading(true) // Iniciar loading
+    setPatientLoading(true)
     try {
       const response = await fetch('/api/patients', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          clinicId: clinicId
+        }),
       })
 
       if (response.ok) {
@@ -316,7 +329,7 @@ export default function Dashboard() {
         })
         setIsPatientDialogOpen(false)
         patientForm.reset()
-        fetchDashboardData() // Atualizar dados
+        fetchDashboardData()
       } else {
         throw new Error('Erro ao cadastrar paciente')
       }
@@ -327,7 +340,7 @@ export default function Dashboard() {
         variant: "destructive"
       })
     } finally {
-      setPatientLoading(false) // Finalizar loading
+      setPatientLoading(false)
     }
   }
 
@@ -404,7 +417,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard - {clinicName}</h1>
           <p className="text-gray-600 mt-1">Visão geral da sua clínica</p>
         </div>
         <div className="flex items-center gap-2">
@@ -445,7 +458,7 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row gap-4">
-            {/* Novo Agendamento - Modal Reutilizado da Agenda */}
+            {/* Novo Agendamento */}
             <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200">
@@ -520,7 +533,7 @@ export default function Dashboard() {
                     </Select>
                   </div>
 
-                  {/* Calendário e Horários - Layout Melhorado */}
+                  {/* Calendário e Horários */}
                   {selectedProfissional && selectedProfissionalData && (
                     <div className="space-y-4">
                       <div className="grid gap-6 md:grid-cols-2">
@@ -534,9 +547,7 @@ export default function Dashboard() {
                                 selected={selectedDate} 
                                 onSelect={setSelectedDate}
                                 disabled={(date) => {
-                                  // Desabilitar datas passadas
                                   if (date < new Date()) return true
-                                  // Desabilitar dias em que o profissional não trabalha
                                   return !isProfissionalAvailableOnDate(selectedProfissionalData, date)
                                 }}
                                 className="rounded-md"
@@ -737,7 +748,9 @@ export default function Dashboard() {
                       <Button type="button" variant="outline" onClick={() => setIsPatientDialogOpen(false)}>
                         Cancelar
                       </Button>
-                      <Button type="submit">Cadastrar Paciente</Button>
+                      <Button type="submit" disabled={patientLoading}>
+                        {patientLoading ? 'Cadastrando...' : 'Cadastrar Paciente'}
+                      </Button>
                     </div>
                   </form>
                 </Form>
